@@ -1,0 +1,43 @@
+name: MLOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install fastapi uvicorn scikit-learn pandas numpy mlflow pytest httpx python-dotenv schedule
+
+    - name: Train model
+      run: python app/train.py
+
+    - name: Run drift check
+      run: python monitoring/drift_report.py
+
+    - name: Run tests
+      run: pytest tests/ -v
+
+    - name: Build Docker image
+      run: docker build -t mlops-pipeline:latest .
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Deploy to AWS
+      run: echo "Deploying to AWS EC2..."
